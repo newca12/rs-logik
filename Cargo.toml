@@ -1,0 +1,16 @@
+[package]
+name = "logik"
+version = "0.1.0"
+authors = ["Nathan Graule <solarliner@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "logik"
+path = "src/lib.rs"
+
+[[bin]]
+name = "repl"
+path = "bin/repl.rs"
+
+[dependencies]
+logos = "0.10.0-rc2"
