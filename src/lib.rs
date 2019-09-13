@@ -32,6 +32,7 @@ pub struct Parser<'s> {
 #[derive(Debug)]
 pub enum Node<'s> {
     IdentNode(&'s str),
+    ValueNode(bool),
     UnopNode(&'s str, Box<Node<'s>>),
     BinOpNode(&'s str, Box<Node<'s>>, Box<Node<'s>>),
     ExprNode(Box<Node<'s>>),
@@ -44,16 +45,16 @@ impl<'s> Parser<'s> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Node<'s>, Range<usize>> {
+    pub fn parse(&mut self) -> Result<Node<'s>, (Range<usize>, &'s str)> {
         match self.expr() {
             Some(res) => {
                 if self.expect(Token::End) {
                     Ok(res)
                 } else {
-                    Err(self.lexer.range())
+                    Err((self.lexer.range(), self.lexer.slice()))
                 }
             }
-            None => Err(self.lexer.range()),
+            None => Err((self.lexer.range(), self.lexer.slice())),
         }
     }
 
@@ -72,17 +73,28 @@ impl<'s> Parser<'s> {
 
     fn expr(&mut self) -> Option<Node<'s>> {
         if self.expect(Token::Parent) {
-            self.accept(Token::Parent);
+            self.accept(Token::Parent)?;
             let expr = self.expr()?;
-            self.accept(Token::Parent);
+            self.accept(Token::Parent)?;
             return Some(expr);
         }
-        self.e3()
+        self.e4()
+    }
+
+    fn e4(&mut self) -> Option<Node<'s>> {
+        let left = self.e3()?;
+        match self.accept(Token::OpInduces) {
+            Some((_, s)) => {
+                let right = self.e4()?;
+                Some(Node::BinOpNode(s, Box::new(left), Box::new(right)))
+            }
+            None => Some(left),
+        }
     }
 
     fn e3(&mut self) -> Option<Node<'s>> {
         let left = self.e2()?;
-        match self.accept(Token::OpInduces) {
+        match self.accept(Token::OpOr) {
             Some((_, s)) => {
                 let right = self.e3()?;
                 Some(Node::BinOpNode(s, Box::new(left), Box::new(right)))
@@ -93,7 +105,7 @@ impl<'s> Parser<'s> {
 
     fn e2(&mut self) -> Option<Node<'s>> {
         let left = self.e1()?;
-        match self.accept(Token::OpOr) {
+        match self.accept(Token::OpAnd) {
             Some((_, s)) => {
                 let right = self.e2()?;
                 Some(Node::BinOpNode(s, Box::new(left), Box::new(right)))
@@ -103,23 +115,36 @@ impl<'s> Parser<'s> {
     }
 
     fn e1(&mut self) -> Option<Node<'s>> {
-        let left = self.e0()?;
-        match self.accept(Token::OpAnd) {
+        match self.accept(Token::OpNeg) {
             Some((_, s)) => {
                 let right = self.e1()?;
-                Some(Node::BinOpNode(s, Box::new(left), Box::new(right)))
+                Some(Node::UnopNode(s, Box::new(right)))
             }
-            None => Some(left),
+            None => self.e0(),
         }
     }
 
     fn e0(&mut self) -> Option<Node<'s>> {
+        match self.accept(Token::Parent) {
+            Some((_, _)) => {
+                let e = self.expr()?;
+                self.accept(Token::Parent)?;
+                Some(Node::ExprNode(Box::new(e)))
+            }
+            None => self.eident(),
+        }
+    }
+
+    fn eident(&mut self) -> Option<Node<'s>> {
         match self.accept(Token::Ident) {
             Some((_, s)) => Some(Node::IdentNode(s)),
             None => {
-                let (_, s) = self.accept(Token::OpNeg)?;
-                let right = self.expr()?;
-                Some(Node::UnopNode(s, Box::new(right)))
+                let (_, s) = self.accept(Token::Value)?;
+                match s {
+                    "0" => Some(Node::ValueNode(false)),
+                    "1" => Some(Node::ValueNode(true)),
+                    _ => None,
+                }
             }
         }
     }
