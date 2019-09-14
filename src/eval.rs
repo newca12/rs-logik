@@ -64,7 +64,7 @@ pub fn pprint<'s>(ast: &Node<'s>) -> String {
         Node::IdentNode(i) => format!("{}", i),
         Node::ExprNode(expr) => format!("({})", pprint(expr.as_ref())),
         Node::BinOpNode(op, left, right) => format!(
-            "{} {} {}",
+            "({} {} {})",
             pprint(left.as_ref()),
             op,
             pprint(right.as_ref())
