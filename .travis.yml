@@ -15,12 +15,13 @@ script:
 before_deploy:
     - git config --local user.name "Travis CI",
     - git config --local user.email "noreply@users.rs-logik.github.com"
-    - export TRAVIS_TAG="nightly"
+    - export TRAVIS_TAG="nightly-${TRAVIS_RUST_VERSION}"
+    - export TRAVIS_FILENAME="logik-${TRAVIS_OS_NAME}-${TRAVIS_TAG}-$(git log --format=%h -1).tar.gz" 
     - git tag $TRAVIS_TAG
+    - tar -czvf $TRAVIS_FILENAME target/release
 deploy:
     provider: releases
     api_key: $GITHUB_PAT
-    file: target/release/repl
-    overwrite: true
+    file: $TRAVIS_FILENAME
     skip_cleanup: true
 
