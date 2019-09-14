@@ -1,12 +1,59 @@
 use crate::parse::{Node, Parser};
 use crate::util::cartesian_product;
 use std::collections::{HashMap, HashSet};
-use std::fmt::{self, Write};
+use std::fmt::{self, Display};
+
+pub struct TruthTable<'s> {
+    variables: HashSet<&'s str>,
+    table: HashMap<Vec<bool>, bool>,
+}
+
+impl<'s> TruthTable<'s> {
+    pub fn create<F: Fn(&HashMap<&'s str, bool>) -> bool>(
+        variables: HashSet<&'s str>,
+        pred: F,
+    ) -> Self {
+        let (envs, tab) = make_env(&variables);
+        let mut table = HashMap::new();
+        if variables.len() > 0 {
+            for (i, env) in envs.iter().enumerate() {
+                table.insert(tab[i].clone(), pred(&env));
+            }
+        } else {
+            table.insert(vec![], pred(&HashMap::new()));
+        }
+        Self { variables, table }
+    }
+}
+
+impl<'s> From<Node<'s>> for TruthTable<'s> {
+    fn from(ast: Node<'s>) -> Self {
+        let mut vars = HashSet::new();
+        get_vars(&ast, &mut vars);
+        Self::create(vars, |env| evaluate(&ast, env))
+    }
+}
+
+impl<'s> Display for TruthTable<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for var in self.variables.iter() {
+            write!(f, "{}\t", var)?;
+        }
+        writeln!(f, "({} entrées)", self.variables.len())?;
+        for (tab, v) in self.table.iter() {
+            for t in tab.iter() {
+                write!(f, "{}\t", if *t { "V" } else { "F" })?;
+            }
+            writeln!(f, "{}", if *v { "V" } else { "F" })?;
+        }
+        Ok(())
+    }
+}
 
 pub fn eval<'s>(input: String) -> Result<String, String> {
     let mut parser = Parser::new(&input);
     match parser.parse() {
-        Ok(node) => evaluate_ast(&node).map_err(|_| String::from("Couldn't evaluate AST")),
+        Ok(node) => Ok(format!("{}", TruthTable::from(node))),
         Err(err) => Err(format!("Couldn't parse input {:?}", err)),
     }
 }
@@ -24,30 +71,6 @@ pub fn pprint<'s>(ast: &Node<'s>) -> String {
         ),
         Node::UnopNode(op, right) => format!("{} {}", op, pprint(right.as_ref())),
     }
-}
-
-pub fn evaluate_ast<'s>(ast: &Node<'s>) -> Result<String, fmt::Error> {
-    let mut s = String::new();
-    let mut vars = HashSet::new();
-    get_vars(ast, &mut vars);
-    let (envs, tab) = make_env(&vars);
-    if vars.len() > 0 {
-        writeln!(&mut s, "Table de vérité:\n")?;
-        for var in vars.iter() {
-            write!(&mut s, "{}\t", var)?;
-        }
-        writeln!(&mut s, "({} entrées)", vars.len())?;
-        for (i, env) in envs.iter().enumerate() {
-            for t in tab[i].iter() {
-                write!(&mut s, "{}\t", *t as u8)?;
-            }
-            writeln!(&mut s, "{}", evaluate(ast, env) as u8)?;
-        }
-    } else {
-        writeln!(&mut s, "Valeur: {}", evaluate(ast, &HashMap::new()) as u8)?;
-    }
-
-    Ok(s.clone())
 }
 
 fn evaluate<'s>(ast: &Node<'s>, env: &HashMap<&'s str, bool>) -> bool {
