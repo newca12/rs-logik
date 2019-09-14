@@ -21,5 +21,6 @@ deploy:
     provider: releases
     api_key: $GITHUB_PAT
     file: target/release/repl
+    overwrite: true
     skip_cleanup: true
 
