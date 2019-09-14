@@ -150,9 +150,42 @@ impl<'s> Parser<'s> {
     }
 }
 
+impl<'s> Node<'s> {
+    pub fn is_op(&self, op: &'s str) -> bool {
+        match self {
+            Node::BinOpNode(ast_op, _, _) => &op == ast_op,
+            Node::UnopNode(ast_op, _) => &op == ast_op,
+            _ => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::{Node, Parser};
+
+    #[test]
+    fn node_is_op_binop() {
+        let node = Node::BinOpNode(
+            "ou",
+            Box::new(Node::ValueNode(false)),
+            Box::new(Node::ValueNode(true)),
+        );
+        assert!(node.is_op("ou"));
+        assert!(!node.is_op("et"));
+    }
+
+    #[test]
+    fn node_is_op_unop() {
+        let node = Node::UnopNode("non", Box::new(Node::ValueNode(false)));
+        assert!(node.is_op("non"));
+    }
+
+    #[test]
+    fn node_is_op_other() {
+        let node = Node::IdentNode("a");
+        assert!(!node.is_op("any"));
+    }
 
     #[test]
     fn parse_binop_1() {
