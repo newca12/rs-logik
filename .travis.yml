@@ -1,0 +1,15 @@
+os:
+    - linux
+    - osx
+language: rust
+rust:
+    - stable
+    - nightly
+cache: cargo
+matrix:
+    allow_features:
+        - rust: nightly
+    fast_finish: true
+script:
+    - cargo build --release --verbose
+
