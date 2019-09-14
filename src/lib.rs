@@ -1,4 +1,5 @@
 use logos::{Lexer, Logos};
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 
 #[derive(Copy, Clone, Debug, Logos, PartialEq)]
@@ -29,7 +30,7 @@ pub struct Parser<'s> {
     lexer: Lexer<Token, &'s str>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Node<'s> {
     IdentNode(&'s str),
     ValueNode(bool),
@@ -148,4 +149,96 @@ impl<'s> Parser<'s> {
             }
         }
     }
+}
+
+pub fn evaluate_all<'s>(ast: &Node<'s>) {
+    let mut vars = HashSet::new();
+    get_vars(ast, &mut vars);
+    let (envs, tab) = make_env(&vars);
+    if vars.len() > 0 {
+        println!("Table de vérité:\n");
+        for var in vars.iter() {
+            print!("{}\t", var);
+        }
+        println!("({} entrées)", vars.len());
+        for (i, env) in envs.iter().enumerate() {
+            for t in tab[i].iter() {
+                print!("{}\t", *t as u8);
+            }
+            println!("{}", evaluate(ast, env) as u8);
+        }
+    } else {
+        println!("Valeur: {}", evaluate(ast, &HashMap::new()) as u8);
+    }
+}
+
+fn evaluate<'s>(ast: &Node<'s>, env: &HashMap<&'s str, bool>) -> bool {
+    match ast {
+        Node::ValueNode(v) => *v,
+        Node::IdentNode(i) => env[i],
+        Node::ExprNode(expr) => evaluate(expr, env),
+        Node::UnopNode(_, e) => !evaluate(e, env),
+        Node::BinOpNode(op, l, r) => match op {
+            &"ou" => evaluate(l, env) || evaluate(r, env),
+            &"et" => evaluate(l, env) && evaluate(r, env),
+            _ => (!evaluate(l, env)) || evaluate(r, env),
+        },
+    }
+}
+
+fn get_vars<'s>(ast: &Node<'s>, vars: &mut HashSet<&'s str>) {
+    match ast {
+        Node::ValueNode(_) => (),
+        Node::IdentNode(i) => {
+            if !vars.contains(i) {
+                vars.insert(i);
+            }
+        }
+        Node::UnopNode(_, e) => get_vars(e, vars),
+        Node::BinOpNode(_, l, r) => {
+            get_vars(l, vars);
+            get_vars(r, vars);
+        }
+        Node::ExprNode(e) => get_vars(e, vars),
+    }
+}
+
+fn make_env<'s>(vars: &HashSet<&'s str>) -> (Vec<HashMap<&'s str, bool>>, Vec<Vec<bool>>) {
+    let tab = cartesian_product(vec![vec![false, true]; vars.len()]);
+    let mut env_list = vec![];
+    for lines in tab.iter() {
+        let mut env = HashMap::new();
+        for (i, v) in vars.iter().enumerate() {
+            env.insert(*v, lines[i]);
+        }
+        env_list.push(env);
+    }
+    return (env_list, tab);
+}
+
+fn cartesian_product<T: Clone>(lists: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    match lists.split_first() {
+        Some((first, rest)) => {
+            let init: Vec<Vec<T>> = first.iter().cloned().map(|n| vec![n]).collect();
+            rest.iter()
+                .cloned()
+                .fold(init, |vec, list| partial_cartesian(vec, list))
+        }
+        None => vec![],
+    }
+}
+
+fn partial_cartesian<T: Clone>(a: Vec<Vec<T>>, b: Vec<T>) -> Vec<Vec<T>> {
+    a.into_iter()
+        .flat_map(|xs| {
+            b.iter()
+                .cloned()
+                .map(|y| {
+                    let mut vec = xs.clone();
+                    vec.push(y);
+                    vec
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
 }

@@ -1,4 +1,4 @@
-use logik::Parser;
+use logik::{evaluate_all, Parser};
 
 use std::io::{self, Write};
 
@@ -11,7 +11,7 @@ fn main() -> io::Result<()> {
             Ok(_) => {
                 let mut parser = Parser::new(buffer.as_str());
                 match parser.parse() {
-                    Ok(node) => println!("{:?}", node),
+                    Ok(node) => evaluate_all(&node),
                     Err(range) => println!("Error parsing input {:?}", range),
                 }
             }
