@@ -10,8 +10,11 @@ matrix:
     allow_features:
         - rust: nightly
     fast_finish: true
-script:
-    - cargo build --release --verbose
+jobs:
+    include:
+        - script: cargo test
+        - stage: deploy
+          script: cargo build --release --verbose
 before_deploy:
     - export TRAVIS_FILENAME="logik-${TRAVIS_OS_NAME}-${TRAVIS_TAG}-$(git log --format=%h -1).tar.gz" 
     - tar -czvf $TRAVIS_FILENAME target/release
