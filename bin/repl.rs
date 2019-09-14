@@ -1,4 +1,4 @@
-use logik::{evaluate_all, Parser};
+use logik::eval;
 
 use std::io::{self, Write};
 
@@ -8,14 +8,11 @@ fn main() -> io::Result<()> {
         io::stdout().flush()?;
         let mut buffer = String::new();
         match io::stdin().read_line(&mut buffer) {
-            Ok(_) => {
-                let mut parser = Parser::new(buffer.as_str());
-                match parser.parse() {
-                    Ok(node) => evaluate_all(&node),
-                    Err(range) => println!("Error parsing input {:?}", range),
-                }
-            }
-            Err(err) => println!("Error: {}", err),
-        }
+            Ok(_) => match eval(buffer) {
+                Ok(data) => writeln!(io::stdout(), "{}", data)?,
+                Err(err) => writeln!(io::stderr(), "{}", err)?,
+            },
+            Err(err) => writeln!(io::stderr(), "Error reading stdin: {}", err)?,
+        };
     }
 }
