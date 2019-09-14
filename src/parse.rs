@@ -29,7 +29,7 @@ pub struct Parser<'s> {
     lexer: Lexer<Token, &'s str>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node<'s> {
     IdentNode(&'s str),
     ValueNode(bool),
@@ -147,5 +147,66 @@ impl<'s> Parser<'s> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{Node, Parser};
+
+    #[test]
+    fn parse_binop_1() {
+        let mut parser = Parser::new("a -> b");
+        assert_eq!(
+            parser.parse().expect("Couldn't parse input"),
+            Node::BinOpNode(
+                "->",
+                Box::new(Node::IdentNode("a")),
+                Box::new(Node::IdentNode("b"))
+            )
+        );
+    }
+
+    #[test]
+    fn parse_binop_2() {
+        let mut parser = Parser::new("0 ou 1");
+        assert_eq!(
+            parser.parse().expect("Couldn't parse input"),
+            Node::BinOpNode(
+                "ou",
+                Box::new(Node::ValueNode(false)),
+                Box::new(Node::ValueNode(true))
+            )
+        );
+    }
+
+    #[test]
+    fn parse_unop() {
+        let mut parser = Parser::new("non a");
+        assert_eq!(
+            parser.parse().expect("Couldn't parse input"),
+            Node::UnopNode("non", Box::new(Node::IdentNode("a")))
+        );
+    }
+
+    #[test]
+    fn parse_complex() {
+        let mut parser = Parser::new("a et (non b ou c) -> 1");
+        assert_eq!(
+            parser.parse().expect("Couldn't parse input"),
+            Node::BinOpNode(
+                "->",
+                Box::new(Node::BinOpNode(
+                    "et",
+                    Box::new(Node::IdentNode("a")),
+                    Box::new(Node::ExprNode(Box::new(Node::BinOpNode(
+                        "ou",
+                        Box::new(Node::UnopNode("non", Box::new(Node::IdentNode("b")))),
+                        Box::new(Node::IdentNode("c"))
+                    ))))
+                )),
+                Box::new(Node::ValueNode(true))
+            )
+        );
     }
 }
