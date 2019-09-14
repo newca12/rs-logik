@@ -3,36 +3,44 @@ use crate::Node;
 pub fn distribute_or<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
     match *ast {
         Node::BinOpNode("->", _, _) => None,
-        Node::BinOpNode("ou", expr_a, expr_b) => {
-            if let Node::BinOpNode("et", expr_c, expr_d) = *expr_b {
+        Node::BinOpNode("ou", oexpr_a, oexpr_b) => {
+            let expr_a = distribute_or(oexpr_a.clone())?;
+            let expr_b = distribute_or(oexpr_b.clone())?;
+            if let Node::BinOpNode("et", expr_c, expr_d) = expr_b {
+                let expr_c = distribute_or(expr_c)?;
+                let expr_d = distribute_or(expr_d)?;
+
                 let left = distribute_or(Box::new(Node::BinOpNode(
                     "ou",
-                    Box::new(distribute_or(expr_a.clone())?),
-                    Box::new(distribute_or(expr_c)?),
+                    Box::new(expr_a.clone()),
+                    Box::new(expr_c),
                 )))?;
                 let right = distribute_or(Box::new(Node::BinOpNode(
                     "ou",
-                    Box::new(distribute_or(expr_a)?),
-                    Box::new(distribute_or(expr_d)?),
+                    Box::new(expr_a),
+                    Box::new(expr_d),
                 )))?;
                 Some(Node::BinOpNode("et", Box::new(left), Box::new(right)))
-            } else if let Node::BinOpNode("et", expr_c, expr_d) = *expr_a {
+            } else if let Node::BinOpNode("et", expr_c, expr_d) = expr_a {
+                let expr_c = distribute_or(expr_c)?;
+                let expr_d = distribute_or(expr_d)?;
                 let left = distribute_or(Box::new(Node::BinOpNode(
                     "ou",
-                    Box::new(distribute_or(expr_c)?),
-                    Box::new(distribute_or(expr_b.clone())?),
+                    Box::new(expr_c),
+                    Box::new(expr_b.clone()),
                 )))?;
                 let right = distribute_or(Box::new(Node::BinOpNode(
                     "ou",
-                    Box::new(distribute_or(expr_d)?),
-                    Box::new(distribute_or(expr_b)?),
+                    Box::new(expr_d),
+                    Box::new(expr_b),
                 )))?;
+
                 Some(Node::BinOpNode("et", Box::new(left), Box::new(right)))
             } else {
                 Some(Node::BinOpNode(
                     "ou",
-                    Box::new(distribute_or(expr_a)?),
-                    Box::new(distribute_or(expr_b)?),
+                    Box::new(distribute_or(oexpr_a)?),
+                    Box::new(distribute_or(oexpr_b)?),
                 ))
             }
         }
