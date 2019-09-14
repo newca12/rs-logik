@@ -11,6 +11,21 @@ pub fn eval<'s>(input: String) -> Result<String, String> {
     }
 }
 
+pub fn pprint<'s>(ast: &Node<'s>) -> String {
+    match ast {
+        Node::ValueNode(v) => format!("{}", *v as u8),
+        Node::IdentNode(i) => format!("{}", i),
+        Node::ExprNode(expr) => format!("({})", pprint(expr.as_ref())),
+        Node::BinOpNode(op, left, right) => format!(
+            "{} {} {}",
+            pprint(left.as_ref()),
+            op,
+            pprint(right.as_ref())
+        ),
+        Node::UnopNode(op, right) => format!("{} {}", op, pprint(right.as_ref())),
+    }
+}
+
 pub fn evaluate_ast<'s>(ast: &Node<'s>) -> Result<String, fmt::Error> {
     let mut s = String::new();
     let mut vars = HashSet::new();
