@@ -41,7 +41,6 @@ pub fn distribute_or<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
             Box::new(distribute_or(left)?),
             Box::new(distribute_or(right)?),
         )),
-        Node::UnopNode(_, right) => Some(*right),
         Node::ExprNode(expr) => distribute_or(expr),
         _ => Some(*ast),
     }
@@ -51,7 +50,6 @@ pub fn distribute_or<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
 mod test {
     use super::distribute_or;
     use super::Node;
-    use crate::eval::pprint;
 
     #[test]
     fn test_distribute_or() {
@@ -64,11 +62,21 @@ mod test {
             )))),
             Box::new(Node::IdentNode("b")),
         );
-        println!(
-            "{} -> {}",
-            pprint(&input_node),
-            pprint(&distribute_or(Box::new(input_node)).expect("Couldn't distribute or"))
+        let output_node = distribute_or(Box::new(input_node)).expect("Couldn't distribute or");
+        let expected_node = Node::BinOpNode(
+            "et",
+            Box::new(Node::BinOpNode(
+                "ou",
+                Box::new(Node::UnopNode("non", Box::new(Node::IdentNode("a")))),
+                Box::new(Node::IdentNode("b")),
+            )),
+            Box::new(Node::BinOpNode(
+                "ou",
+                Box::new(Node::IdentNode("c")),
+                Box::new(Node::IdentNode("b")),
+            )),
         );
-        assert!(false);
+        println!("Expected: {}\tActual: {}", expected_node, output_node);
+        assert_eq!(expected_node, output_node);
     }
 }
