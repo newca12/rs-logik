@@ -1,3 +1,4 @@
+use crate::eval::pprint;
 use logos::{Lexer, Logos};
 use std::ops::Range;
 
@@ -36,6 +37,12 @@ pub enum Node<'s> {
     UnopNode(&'s str, Box<Node<'s>>),
     BinOpNode(&'s str, Box<Node<'s>>, Box<Node<'s>>),
     ExprNode(Box<Node<'s>>),
+}
+
+impl<'s> std::fmt::Display for Node<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", pprint(self))
+    }
 }
 
 impl<'s> Parser<'s> {
