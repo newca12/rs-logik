@@ -54,10 +54,26 @@ pub fn distribute_or<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
     }
 }
 
+pub fn remove_implications<'s>(ast: Box<Node<'s>>) -> Node<'s> {
+    match *ast {
+        Node::BinOpNode(op, left, right) => {
+            if op == "->" {
+                let left = remove_implications(left);
+                let right = remove_implications(right);
+                Node::BinOpNode("ou", Box::new(Node::UnopNode("non", Box::new(left))), Box::new(right))
+            } else {
+                // Reforming node as `ast` has moved
+                Node::BinOpNode(op, left, right)
+            }
+        }
+        _ => *ast,
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::distribute_or;
     use super::Node;
+    use super::{distribute_or, remove_implications};
 
     #[test]
     fn test_distribute_or() {
@@ -86,5 +102,43 @@ mod test {
         );
         println!("Expected: {}\tActual: {}", expected_node, output_node);
         assert_eq!(expected_node, output_node);
+    }
+
+    #[test]
+    fn test_remove_implications() {
+        let expr_a_in = Node::BinOpNode(
+            "->",
+            Box::new(Node::IdentNode("a")),
+            Box::new(Node::IdentNode("b")),
+        );
+        let expr_a_out = remove_implications(Box::from(expr_a_in.clone()));
+        let expr_a_expected = Node::BinOpNode(
+            "ou",
+            Box::new(Node::UnopNode("non", Box::new(Node::IdentNode("a")))),
+            Box::new(Node::IdentNode("b")),
+        );
+
+        println!(
+            "In: {}\tExpected: {}\tActual: {}",
+            expr_a_in, expr_a_expected, expr_a_out
+        );
+        assert_eq!(expr_a_expected, expr_a_out);
+        let expr_b_in = Node::BinOpNode(
+            "->",
+            Box::new(expr_a_in.clone()),
+            Box::new(expr_a_in.clone()),
+        );
+        let expr_b_out = remove_implications(Box::new(expr_b_in.clone()));
+        let expr_b_expected = Node::BinOpNode(
+            "ou",
+            Box::new(Node::UnopNode("non", Box::new(expr_a_expected.clone()))),
+            Box::new(expr_a_expected),
+        );
+
+        println!(
+            "In: {}\tExpected: {}\tActual: {}",
+            expr_b_in, expr_b_expected, expr_b_out
+        );
+        assert_eq!(expr_b_expected, expr_b_out);
     }
 }
