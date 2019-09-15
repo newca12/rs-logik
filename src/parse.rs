@@ -20,6 +20,8 @@ pub enum Token {
     #[token = "("]
     #[token = ")"]
     Parent,
+    #[token = ":"]
+    Colon,
     #[end]
     End,
     #[error]
@@ -53,16 +55,13 @@ impl<'s> Parser<'s> {
     }
 
     pub fn parse(&mut self) -> Result<Node<'s>, (Range<usize>, &'s str)> {
-        match self.expr() {
-            Some(res) => {
-                if self.expect(Token::End) {
-                    Ok(res)
-                } else {
-                    Err((self.lexer.range(), self.lexer.slice()))
-                }
-            }
-            None => Err((self.lexer.range(), self.lexer.slice())),
-        }
+        self.expr()
+            .ok_or_else(|| (self.lexer.range(), self.lexer.slice()))
+    }
+
+    pub fn parse_command(&mut self) -> Result<(&'s str, Node<'s>), (Range<usize>, &'s str)> {
+        self.command()
+            .ok_or_else(|| (self.lexer.range(), self.lexer.slice()))
     }
 
     fn expect(&self, t: Token) -> bool {
@@ -76,6 +75,16 @@ impl<'s> Parser<'s> {
             return res;
         }
         return None;
+    }
+
+    fn command(&mut self) -> Option<(&'s str, Node<'s>)> {
+        let node = self.eident()?;
+        self.accept(Token::Colon)?;
+        let expr = self.expr()?;
+        match node {
+            Node::IdentNode(i) => Some((i, expr)),
+            _ => None,
+        }
     }
 
     fn expr(&mut self) -> Option<Node<'s>> {
@@ -138,21 +147,25 @@ impl<'s> Parser<'s> {
                 self.accept(Token::Parent)?;
                 Some(Node::ExprNode(Box::new(e)))
             }
-            None => self.eident(),
+            None => self.eident().or_else(|| self.evalue()),
         }
     }
 
     fn eident(&mut self) -> Option<Node<'s>> {
         match self.accept(Token::Ident) {
             Some((_, s)) => Some(Node::IdentNode(s)),
-            None => {
-                let (_, s) = self.accept(Token::Value)?;
-                match s {
-                    "0" => Some(Node::ValueNode(false)),
-                    "1" => Some(Node::ValueNode(true)),
-                    _ => None,
-                }
-            }
+            None => None,
+        }
+    }
+
+    fn evalue(&mut self) -> Option<Node<'s>> {
+        match self.accept(Token::Value) {
+            Some((_, s)) => match s {
+                "0" => Some(Node::ValueNode(false)),
+                "1" => Some(Node::ValueNode(true)),
+                _ => None,
+            },
+            None => None,
         }
     }
 }

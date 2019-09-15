@@ -1,4 +1,5 @@
 use crate::parse::{Node, Parser};
+use crate::solve::{distribute_or, extract_clauses, remove_implications, remove_negations, Clause};
 use crate::util::cartesian_product;
 use atty::Stream;
 use colored::*;
@@ -54,9 +55,43 @@ impl<'s> Display for TruthTable<'s> {
 
 pub fn eval<'s>(input: String) -> Result<String, String> {
     let mut parser = Parser::new(&input);
-    match parser.parse() {
-        Ok(node) => Ok(format!("{}", TruthTable::from(node))),
-        Err(err) => Err(format!("Couldn't parse input {:?}", err)),
+    if input.contains(":") {
+        match parser.parse_command() {
+            Ok((name, expr)) => match name {
+                "ast" => Ok(format!("{:?}", expr)),
+                "table" => Ok(format!("{}", TruthTable::from(expr))),
+                "cnf" => {
+                    let ast = distribute_or(Box::new(expr)).ok_or("Couldn't distribute or")?;
+                    let ast = remove_implications(Box::new(ast));
+                    let ast = remove_negations(Box::new(ast.clone()))
+                        .ok_or(format!("Couldn't remove negations: {}", ast.clone()))?;
+                    Ok(format!("{}", ast))
+                }
+                "clauses" => {
+                    let ast = distribute_or(Box::new(expr)).ok_or("Couldn't distribute or")?;
+                    let ast = remove_implications(Box::new(ast));
+                    let ast = remove_negations(Box::new(ast.clone()))
+                        .ok_or(format!("Couldn't remove negations: {}", ast.clone()))?;
+                    let clauses = extract_clauses(Box::new(ast.clone()))
+                        .ok_or(format!("Couldn't extract clauses: {}", ast))?;
+                    Ok(format!(
+                        "[{}]",
+                        clauses
+                            .iter()
+                            .map(print_clause)
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    ))
+                }
+                x => Err(format!("Command not found: {}", x)),
+            },
+            Err(err) => Err(format!("Couldn't parse input {:?}", err)),
+        }
+    } else {
+        match parser.parse() {
+            Ok(node) => Ok(format!("{}", TruthTable::from(node))),
+            Err(err) => Err(format!("Couldn't parse input {:?}", err)),
+        }
     }
 }
 
@@ -75,6 +110,17 @@ pub fn pprint<'s>(ast: &Node<'s>) -> String {
     }
 }
 
+fn print_clause<'s>(clause: &Clause<'s>) -> String {
+    format!(
+        "[{}]",
+        clause
+            .iter()
+            .map(|l| format!("{}", l))
+            .collect::<Vec<String>>()
+            .join(",")
+    )
+}
+
 fn evaluate<'s>(ast: &Node<'s>, env: &HashMap<&'s str, bool>) -> bool {
     match ast {
         Node::ValueNode(v) => *v,
@@ -89,11 +135,11 @@ fn evaluate<'s>(ast: &Node<'s>, env: &HashMap<&'s str, bool>) -> bool {
     }
 }
 
-fn print_bool(v:bool) ->String {
+fn print_bool(v: bool) -> String {
     if atty::is(Stream::Stdout) {
         format!("{}", if v { "V".clear() } else { "F".dimmed() })
     } else {
-        format!("{}", if v {"V"} else {"F"})
+        format!("{}", if v { "V" } else { "F" })
     }
 }
 
