@@ -1,5 +1,7 @@
 use crate::parse::{Node, Parser};
 use crate::util::cartesian_product;
+use atty::Stream;
+use colored::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 
@@ -42,9 +44,9 @@ impl<'s> Display for TruthTable<'s> {
         writeln!(f, "({} entrées)", self.variables.len())?;
         for (tab, v) in self.table.iter() {
             for t in tab.iter() {
-                write!(f, "{}\t", if *t { "V" } else { "F" })?;
+                write!(f, "{}\t", print_bool(*t))?;
             }
-            writeln!(f, "{}", if *v { "V" } else { "F" })?;
+            writeln!(f, "{}", print_bool(*v))?;
         }
         Ok(())
     }
@@ -84,6 +86,14 @@ fn evaluate<'s>(ast: &Node<'s>, env: &HashMap<&'s str, bool>) -> bool {
             &"et" => evaluate(l, env) && evaluate(r, env),
             _ => (!evaluate(l, env)) || evaluate(r, env),
         },
+    }
+}
+
+fn print_bool(v:bool) ->String {
+    if atty::is(Stream::Stdout) {
+        format!("{}", if v { "V".clear() } else { "F".dimmed() })
+    } else {
+        format!("{}", if v {"V"} else {"F"})
     }
 }
 
