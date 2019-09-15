@@ -13,7 +13,7 @@ matrix:
 stages:
   - test
   - name: build
-    if: branch = master
+    if: branch = master OR tag IS present
 jobs:
   include:
     - stage: test
