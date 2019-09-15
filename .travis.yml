@@ -28,5 +28,5 @@ jobs:
           tags: true
         skip_cleanup: true
       before_deploy:
-        - export TRAVIS_FILENAME="logik-${TRAVIS_OS_NAME}-${TRAVIS_TAG}-$(git log --format=%h -1).tar.gz"
+        - export TRAVIS_FILENAME="logik-${TRAVIS_OS_NAME}-${TRAVIS_TAG/nightly/$(git log --format=%h -1)}.tar.gz"
         - tar -czvf $TRAVIS_FILENAME target/release
