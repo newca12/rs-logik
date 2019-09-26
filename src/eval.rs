@@ -3,6 +3,8 @@ use crate::solve::{distribute_or, extract_clauses, remove_implications, remove_n
 use crate::util::cartesian_product;
 use atty::Stream;
 use colored::*;
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 
@@ -54,43 +56,62 @@ impl<'s> Display for TruthTable<'s> {
 }
 
 pub fn eval<'s>(input: String) -> Result<String, String> {
-    let mut parser = Parser::new(&input);
-    if input.contains(":") {
-        match parser.parse_command() {
-            Ok((name, expr)) => match name {
-                "ast" => Ok(format!("{:?}", expr)),
-                "table" => Ok(format!("{}", TruthTable::from(expr))),
-                "cnf" => {
-                    let ast = distribute_or(Box::new(expr)).ok_or("Couldn't distribute or")?;
-                    let ast = remove_implications(Box::new(ast));
-                    let ast = remove_negations(Box::new(ast.clone()))
-                        .ok_or(format!("Couldn't remove negations: {}", ast.clone()))?;
-                    Ok(format!("{}", ast))
-                }
-                "clauses" => {
-                    let ast = distribute_or(Box::new(expr)).ok_or("Couldn't distribute or")?;
-                    let ast = remove_implications(Box::new(ast));
-                    let ast = remove_negations(Box::new(ast.clone()))
-                        .ok_or(format!("Couldn't remove negations: {}", ast.clone()))?;
-                    let clauses = extract_clauses(Box::new(ast.clone()))
-                        .ok_or(format!("Couldn't extract clauses: {}", ast))?;
-                    Ok(format!(
-                        "[{}]",
-                        clauses
-                            .iter()
-                            .map(print_clause)
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    ))
-                }
-                x => Err(format!("Command not found: {}", x)),
-            },
-            Err(err) => Err(format!("Couldn't parse input {:?}", err)),
+    let input = input.trim();
+    if input.starts_with(":") {
+        lazy_static! {
+            static ref input_re: Regex = Regex::new(r"^:([a-z]+) (.*)$").unwrap();
+        }
+        if !input_re.is_match(input) {
+            Err("Malformed command input".to_string())
+        } else {
+            let matches = input_re.captures(input).ok_or("Malformed command input")?;
+            match Parser::new(
+                matches
+                    .get(2)
+                    .ok_or("Couldn't expression from input")?
+                    .as_str(),
+            )
+            .parse()
+            {
+                Ok(ast) => match matches
+                    .get(1)
+                    .ok_or("Couldn't get command from input")?
+                    .as_str()
+                {
+                    "ast" => Ok(format!("{:?}", ast)),
+                    "table" => Ok(format!("{}", TruthTable::from(ast))),
+                    "cnf" => {
+                        let ast = distribute_or(Box::new(ast)).ok_or("Couldn't distribute or")?;
+                        let ast = remove_implications(Box::new(ast));
+                        let ast = remove_negations(Box::new(ast.clone()))
+                            .ok_or(format!("Couldn't remove negations: {}", ast.clone()))?;
+                        Ok(format!("{}", ast))
+                    }
+                    "clauses" => {
+                        let ast = distribute_or(Box::new(ast)).ok_or("Couldn't distribute or")?;
+                        let ast = remove_implications(Box::new(ast));
+                        let ast = remove_negations(Box::new(ast.clone()))
+                            .ok_or(format!("Couldn't remove negations: {}", ast.clone()))?;
+                        let clauses = extract_clauses(Box::new(ast.clone()))
+                            .ok_or(format!("Couldn't extract clauses: {}", ast))?;
+                        Ok(format!(
+                            "[{}]",
+                            clauses
+                                .iter()
+                                .map(print_clause)
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        ))
+                    }
+                    x => Err(format!("Command not found: {}", x)),
+                },
+                Err(err) => Err(format!("Error parsing input {:?}", err)),
+            }
         }
     } else {
-        match parser.parse() {
-            Ok(node) => Ok(format!("{}", TruthTable::from(node))),
-            Err(err) => Err(format!("Couldn't parse input {:?}", err)),
+        match Parser::new(input).parse() {
+            Ok(ast) => Ok(format!("{}", ast)),
+            Err(err) => Err(format!("Error parsing input {:?}", err)),
         }
     }
 }
