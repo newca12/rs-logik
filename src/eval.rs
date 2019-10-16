@@ -44,7 +44,7 @@ impl<'s> Display for TruthTable<'s> {
         for var in self.variables.iter() {
             write!(f, "{}\t", var)?;
         }
-        writeln!(f, "({} entrées)", self.variables.len())?;
+        writeln!(f, "({} entries)", self.variables.len())?;
         for (tab, v) in self.table.iter() {
             for t in tab.iter() {
                 write!(f, "{}\t", print_bool(*t))?;
@@ -149,8 +149,8 @@ fn evaluate<'s>(ast: &Node<'s>, env: &HashMap<&'s str, bool>) -> bool {
         Node::ExprNode(expr) => evaluate(expr, env),
         Node::UnopNode(_, e) => !evaluate(e, env),
         Node::BinOpNode(op, l, r) => match op {
-            &"ou" => evaluate(l, env) || evaluate(r, env),
-            &"et" => evaluate(l, env) && evaluate(r, env),
+            &"or" => evaluate(l, env) || evaluate(r, env),
+            &"and" => evaluate(l, env) && evaluate(r, env),
             _ => (!evaluate(l, env)) || evaluate(r, env),
         },
     }
