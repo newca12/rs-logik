@@ -38,7 +38,7 @@ impl<'s> Display for Literal<'s> {
     }
 }
 
-pub fn distribute_or<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
+pub fn distribute_or(ast: Box<Node>) -> Option<Node> {
     match *ast {
         Node::BinOpNode("->", _, _) => None,
         Node::BinOpNode("or", oexpr_a, oexpr_b) => {
@@ -92,7 +92,7 @@ pub fn distribute_or<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
     }
 }
 
-pub fn remove_implications<'s>(ast: Box<Node<'s>>) -> Node<'s> {
+pub fn remove_implications(ast: Box<Node>) -> Node {
     match *ast {
         Node::BinOpNode(op, left, right) => {
             if op == "->" {
@@ -112,7 +112,7 @@ pub fn remove_implications<'s>(ast: Box<Node<'s>>) -> Node<'s> {
     }
 }
 
-pub fn remove_negations<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
+pub fn remove_negations(ast: Box<Node>) -> Option<Node> {
     match *ast {
         Node::BinOpNode("->", _, _) => None,
         Node::BinOpNode(op, left, right) => {
@@ -141,7 +141,7 @@ pub fn remove_negations<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
     }
 }
 
-pub fn extract_clauses<'s>(ast: Box<Node<'s>>) -> Option<Vec<Clause<'s>>> {
+pub fn extract_clauses(ast: Box<Node>) -> Option<Vec<Clause>> {
     match *ast {
         Node::IdentNode(i) => Some(vec![vec![Literal::from(i)]]),
         Node::UnopNode("not", right) => {
