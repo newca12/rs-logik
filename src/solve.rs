@@ -1,11 +1,14 @@
-use crate::Node;
+use std::collections::HashSet;
 use std::fmt::{self, Display, Formatter};
+
+use crate::Node;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Literal<'s> {
     identifier: &'s str,
     negated: bool,
 }
+
 pub type Clause<'s> = Vec<Literal<'s>>;
 
 impl<'s> From<&'s str> for Literal<'s> {
@@ -158,10 +161,37 @@ pub fn extract_clauses(ast: Box<Node>) -> Option<Vec<Clause>> {
     }
 }
 
+pub fn sat_solver(clauses: Vec<Clause>) -> bool {
+    let mut set: HashSet<Clause> = HashSet::new();
+    for c in clauses {
+        set.insert(c);
+    }
+    // Extraire les résolvantes (déduire des mini-clauses intermédiaires à partir des clauses existantes)
+    loop {
+        let old_len = set.len();
+        let r = extract_resolvent(&set);
+        for c in set.iter() {
+            if c.len() == 0 {
+                return false;
+            }
+        }
+        for c in r {
+            set.insert(c);
+        }
+        if set.len() == old_len {
+            return true;
+        }
+    }
+}
+
+fn extract_resolvent(clauses: &HashSet<Clause>) -> HashSet<Clause> {
+    // TBD
+}
+
 #[cfg(test)]
 mod test {
+    use super::{distribute_or, extract_clauses, Literal, remove_implications, remove_negations};
     use super::Node;
-    use super::{distribute_or, extract_clauses, remove_implications, remove_negations, Literal};
 
     #[test]
     fn test_distribute_or() {
@@ -258,13 +288,13 @@ mod test {
                 Box::new(Node::IdentNode("b")),
             )),
         )))
-        .expect("Couldn't remove negations");
+            .expect("Couldn't remove negations");
         let expr_b2 = remove_negations(Box::new(Node::BinOpNode(
             "and",
             Box::new(Node::UnopNode("not", Box::new(Node::IdentNode("a")))),
             Box::new(Node::UnopNode("not", Box::new(Node::IdentNode("b")))),
         )))
-        .expect("Couldn't remove negations");
+            .expect("Couldn't remove negations");
         println!("A: {}\tB: {}", expr_b1, expr_b2);
         assert_eq!(expr_b1, expr_b2);
 
