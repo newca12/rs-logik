@@ -9,11 +9,11 @@ pub enum Token {
     Value,
     #[token = "->"]
     OpInduces,
-    #[token = "et"]
+    #[token = "and"]
     OpAnd,
-    #[token = "ou"]
+    #[token = "or"]
     OpOr,
-    #[token = "non"]
+    #[token = "not"]
     OpNeg,
     #[regex = "[a-zA-Z]+"]
     Ident,
@@ -187,18 +187,18 @@ mod test {
     #[test]
     fn node_is_op_binop() {
         let node = Node::BinOpNode(
-            "ou",
+            "or",
             Box::new(Node::ValueNode(false)),
             Box::new(Node::ValueNode(true)),
         );
-        assert!(node.is_op("ou"));
-        assert!(!node.is_op("et"));
+        assert!(node.is_op("or"));
+        assert!(!node.is_op("and"));
     }
 
     #[test]
     fn node_is_op_unop() {
-        let node = Node::UnopNode("non", Box::new(Node::ValueNode(false)));
-        assert!(node.is_op("non"));
+        let node = Node::UnopNode("not", Box::new(Node::ValueNode(false)));
+        assert!(node.is_op("not"));
     }
 
     #[test]
@@ -222,11 +222,11 @@ mod test {
 
     #[test]
     fn parse_binop_2() {
-        let mut parser = Parser::new("0 ou 1");
+        let mut parser = Parser::new("0 or 1");
         assert_eq!(
             parser.parse().expect("Couldn't parse input"),
             Node::BinOpNode(
-                "ou",
+                "or",
                 Box::new(Node::ValueNode(false)),
                 Box::new(Node::ValueNode(true))
             )
@@ -235,26 +235,26 @@ mod test {
 
     #[test]
     fn parse_unop() {
-        let mut parser = Parser::new("non a");
+        let mut parser = Parser::new("not a");
         assert_eq!(
             parser.parse().expect("Couldn't parse input"),
-            Node::UnopNode("non", Box::new(Node::IdentNode("a")))
+            Node::UnopNode("not", Box::new(Node::IdentNode("a")))
         );
     }
 
     #[test]
     fn parse_complex() {
-        let mut parser = Parser::new("a et (non b ou c) -> 1");
+        let mut parser = Parser::new("a and (not b or c) -> 1");
         assert_eq!(
             parser.parse().expect("Couldn't parse input"),
             Node::BinOpNode(
                 "->",
                 Box::new(Node::BinOpNode(
-                    "et",
+                    "and",
                     Box::new(Node::IdentNode("a")),
                     Box::new(Node::ExprNode(Box::new(Node::BinOpNode(
-                        "ou",
-                        Box::new(Node::UnopNode("non", Box::new(Node::IdentNode("b")))),
+                        "or",
+                        Box::new(Node::UnopNode("not", Box::new(Node::IdentNode("b")))),
                         Box::new(Node::IdentNode("c"))
                     ))))
                 )),
