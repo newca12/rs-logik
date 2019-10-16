@@ -2,13 +2,13 @@ use crate::Node;
 use std::fmt::{self, Display, Formatter};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Litteral<'s> {
+pub struct Literal<'s> {
     identifier: &'s str,
     negated: bool,
 }
-pub type Clause<'s> = Vec<Litteral<'s>>;
+pub type Clause<'s> = Vec<Literal<'s>>;
 
-impl<'s> From<&'s str> for Litteral<'s> {
+impl<'s> From<&'s str> for Literal<'s> {
     fn from(identifier: &'s str) -> Self {
         Self {
             identifier,
@@ -17,7 +17,7 @@ impl<'s> From<&'s str> for Litteral<'s> {
     }
 }
 
-impl<'s> Into<Node<'s>> for Litteral<'s> {
+impl<'s> Into<Node<'s>> for Literal<'s> {
     fn into(self) -> Node<'s> {
         if self.negated {
             Node::UnopNode("not", Box::new(Node::IdentNode(self.identifier)))
@@ -27,7 +27,7 @@ impl<'s> Into<Node<'s>> for Litteral<'s> {
     }
 }
 
-impl<'s> Display for Litteral<'s> {
+impl<'s> Display for Literal<'s> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         if self.negated {
             write!(f, "{}", self.identifier)?;
@@ -143,10 +143,10 @@ pub fn remove_negations<'s>(ast: Box<Node<'s>>) -> Option<Node<'s>> {
 
 pub fn extract_clauses<'s>(ast: Box<Node<'s>>) -> Option<Vec<Clause<'s>>> {
     match *ast {
-        Node::IdentNode(i) => Some(vec![vec![Litteral::from(i)]]),
+        Node::IdentNode(i) => Some(vec![vec![Literal::from(i)]]),
         Node::UnopNode("not", right) => {
             if let Node::IdentNode(identifier) = *right {
-                Some(vec![vec![Litteral::from(identifier)]])
+                Some(vec![vec![Literal::from(identifier)]])
             } else {
                 None
             }
@@ -161,7 +161,7 @@ pub fn extract_clauses<'s>(ast: Box<Node<'s>>) -> Option<Vec<Clause<'s>>> {
 #[cfg(test)]
 mod test {
     use super::Node;
-    use super::{distribute_or, extract_clauses, remove_implications, remove_negations, Litteral};
+    use super::{distribute_or, extract_clauses, remove_implications, remove_negations, Literal};
 
     #[test]
     fn test_distribute_or() {
@@ -289,7 +289,7 @@ mod test {
             Box::new(Node::IdentNode("b")),
         ));
         let clauses_a_out = extract_clauses(expr_a_in.clone());
-        let clauses_a_expected = vec![vec![Litteral::from("a"), Litteral::from("b")]];
+        let clauses_a_expected = vec![vec![Literal::from("a"), Literal::from("b")]];
 
         println!(
             "In: {}\tExpected: {:?}\nActual: {:?}",
