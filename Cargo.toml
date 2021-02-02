@@ -13,7 +13,7 @@ name = "repl"
 path = "bin/repl.rs"
 
 [dependencies]
-logos = "0.10.0-rc2"
+logos = "0.12.0"
 clap = "2.33.0"
 colored = "1.8"
 atty = "0.2.13"
