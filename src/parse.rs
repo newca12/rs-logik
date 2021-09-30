@@ -4,32 +4,32 @@ use std::ops::Range;
 
 #[derive(Copy, Clone, Debug, Logos, PartialEq)]
 pub enum Token {
-    #[token = "0"]
-    #[token = "1"]
+    #[token("0")]
+    #[token("1")]
     Value,
-    #[token = "->"]
+    #[token("->")]
     OpInduces,
-    #[token = "and"]
+    #[token("and")]
     OpAnd,
-    #[token = "or"]
+    #[token("or")]
     OpOr,
-    #[token = "not"]
+    #[token("not")]
     OpNeg,
-    #[regex = "[a-zA-Z]+"]
+    #[regex("[a-zA-Z]+")]
     Ident,
-    #[token = "("]
-    #[token = ")"]
+    #[token("(")]
+    #[token(")")]
     Parent,
-    #[token = ":"]
+    #[token(":")]
     Colon,
-    #[end]
-    End,
     #[error]
+    #[regex(r"[ \t\n\f]+", logos::skip)]
     Error,
 }
 
 pub struct Parser<'s> {
-    lexer: Lexer<Token, &'s str>,
+    lexer: Lexer<'s, Token>,
+    t: Option<Token>
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -51,27 +51,31 @@ impl<'s> Parser<'s> {
     pub fn new(expr: &'s str) -> Self {
         Self {
             lexer: Token::lexer(expr),
+            t: None
         }
     }
 
     pub fn parse(&mut self) -> Result<Node<'s>, (Range<usize>, &'s str)> {
         self.expr()
-            .ok_or_else(|| (self.lexer.range(), self.lexer.slice()))
+            .ok_or_else(|| (self.lexer.span(), self.lexer.slice()))
     }
 
     pub fn parse_command(&mut self) -> Result<(&'s str, Node<'s>), (Range<usize>, &'s str)> {
         self.command()
-            .ok_or_else(|| (self.lexer.range(), self.lexer.slice()))
+            .ok_or_else(|| (self.lexer.span(), self.lexer.slice()))
     }
 
-    fn expect(&self, t: Token) -> bool {
-        self.lexer.token == t
+    fn expect(&mut self, t: Token) -> bool {
+        self.t == Some(t)
     }
 
     fn accept(&mut self, t: Token) -> Option<(Range<usize>, &'s str)> {
+        if self.t.is_none() {
+            self.t = self.lexer.next();
+        }
         if self.expect(t) {
-            let res = Some((self.lexer.range(), self.lexer.slice()));
-            self.lexer.advance();
+            let res = Some((self.lexer.span(), self.lexer.slice()));
+            self.t = self.lexer.next();
             return res;
         }
         return None;
